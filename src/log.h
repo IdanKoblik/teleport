@@ -2,6 +2,8 @@
 #define LOG_H_
 
 #include <time.h>
+#include <string.h>
+#include <errno.h>
 
 #define LOG(fmt, ...) \
     do { \
@@ -14,7 +16,10 @@
     } while (0)
 
 #define ERROR(fmt, ...) \
-    LOG("[ERROR] " fmt, ##__VA_ARGS__)
+    do { \
+        int _err = errno; \
+        LOG("[ERROR] " fmt " (errno=%d: %s)", ##__VA_ARGS__, _err, strerror(_err)); \
+    } while (0)
 
 #define WARN(fmt, ...) \
     LOG("[WARN] " fmt, ##__VA_ARGS__)
