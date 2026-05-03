@@ -1,6 +1,8 @@
 #ifndef LOG_H_
 #define LOG_H_
 
+#include <time.h>
+
 #define LOG(fmt, ...) \
     do { \
         time_t _now = time(NULL); \
