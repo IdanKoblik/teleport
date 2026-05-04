@@ -16,7 +16,7 @@ typedef struct Server {
 } Server;
 
 int open_server(const char *addr, uint16_t port, Server *server);
-int handle_server(Server *server, volatile sig_atomic_t *stop);
+int handle_server(const Server *server, volatile sig_atomic_t *stop);
 void close_server(Server *server);
 
 #endif // SERVER_H_

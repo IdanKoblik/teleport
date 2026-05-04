@@ -4,6 +4,7 @@
 #include <time.h>
 #include <string.h>
 #include <errno.h>
+#include <stdio.h>
 
 #define LOG(fmt, ...) \
     do { \

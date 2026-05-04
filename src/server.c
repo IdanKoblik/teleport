@@ -40,7 +40,7 @@ int open_server(const char *addr, uint16_t port, Server *server) {
     return 0;
 }
 
-int handle_server(Server *server, volatile sig_atomic_t *stop) {
+int handle_server(const Server *server, volatile sig_atomic_t *stop) {
     if (!server)
         return -1;
 

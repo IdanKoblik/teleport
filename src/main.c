@@ -3,6 +3,7 @@
 #include "log.h"
 #include "role.h"
 #include "server.h"
+#include "client.h"
 
 #define DEFAULT_PORT 6666
 
@@ -10,6 +11,7 @@ static volatile sig_atomic_t stop = 0;
 
 void handle_sig(int sig);
 int run_server(const char *addr, uint16_t port);
+int run_client(const char *addr, uint16_t port);
 
 int main(int argc, char **argv) {
     if (argc < 3) {
@@ -42,7 +44,9 @@ int main(int argc, char **argv) {
             break;
         }
         case CLIENT: {
-            ERROR("TODO client");
+            if (run_client(addr, port) < 0)
+                exit(1);
+
             break;
         }
         default: {
@@ -72,5 +76,21 @@ int run_server(const char *addr, uint16_t port) {
     }
 
     close_server(&server);
+    return 0;
+}
+
+int run_client(const char *addr, uint16_t port) {
+    Client client;
+    if (open_client(addr, port, &client) < 0) {
+        ERROR("failed to open server");
+        return -1;
+    }
+
+    if (handle_client(&client, &stop) < 0) {
+        close_client(&client);
+        return -1;
+    }
+
+    close_client(&client);
     return 0;
 }
