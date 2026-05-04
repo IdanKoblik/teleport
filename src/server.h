@@ -7,6 +7,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <signal.h>
 
 // TCP server
 typedef struct Server {
@@ -15,6 +16,7 @@ typedef struct Server {
 } Server;
 
 int open_server(const char *addr, uint16_t port, Server *server);
+int handle_server(Server *server, volatile sig_atomic_t *stop);
 void close_server(Server *server);
 
 #endif // SERVER_H_
