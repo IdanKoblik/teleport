@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <linux/input.h>
 
 #include "log.h"
 #include "role.h"

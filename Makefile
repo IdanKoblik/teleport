@@ -3,8 +3,7 @@ CFLAGS := -Wall -Wextra
 LDLIBS := -lz
 TARGET := tp
 
-SRCDIR := src
-SRCS := $(wildcard $(SRCDIR)/*.c)
+SRCS := $(wildcard *.c)
 OBJS := $(SRCS:.c=.o)
 
 VALGRIND := valgrind
@@ -22,7 +21,7 @@ all: $(TARGET)
 $(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
-$(SRCDIR)/%.o: $(SRCDIR)/%.c
+%.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 debug: CFLAGS += -g -O0
