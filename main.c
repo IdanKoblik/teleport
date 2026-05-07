@@ -1,10 +1,14 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <linux/input.h>
+#include <fcntl.h>
 
+#include "device.h"
 #include "log.h"
 #include "role.h"
 #include "server.h"
 #include "client.h"
+#include "select.h"
 
 #define DEFAULT_PORT 6666
 
@@ -35,7 +39,8 @@ int main(int argc, char **argv) {
     }
 
     const char *addr = argv[2];
-    uint16_t port = (argc >= 4) ? (uint16_t)atoi(argv[3]) : (uint16_t)DEFAULT_PORT;
+    uint16_t port = (argc >= 4) ? (uint16_t)atoi(argv[3]) :
+    (uint16_t)DEFAULT_PORT;
 
     switch (role) {
         case SERVER: {
@@ -81,8 +86,30 @@ int run_server(const char *addr, uint16_t port) {
 }
 
 int run_client(const char *addr, uint16_t port) {
+    size_t count = 0;
+    device_entry *list = fetch_devices(KEYBOARD, &count);
+    if (!list) {
+        ERROR("no keyboard devices available");
+        return -1;
+    }
+
+    int idx = select_keyboard(list, count);
+    if (idx < 0) {
+        free(list);
+        return 0;
+    }
+
+    printf("selected: %s -> %s\n", list[idx].name, list[idx].devnode);
+
+    int keyboard_fd = open(list[idx].devnode, O_RDONLY | O_NONBLOCK);
+    free(list);
+    if (keyboard_fd < 0) {
+        ERROR("failed to open keyboard device (need read permission, e.g. input group or root)");
+        return -1;
+    }
+
     Client client;
-    if (open_client(addr, port, &client) < 0) {
+    if (open_client(addr, port, &client, keyboard_fd, -1) < 0) {
         ERROR("failed to open server");
         return -1;
     }

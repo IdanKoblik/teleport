@@ -2,62 +2,38 @@
 #define PACKET_H_
 
 #include <stdint.h>
-
-#include "keyboard.h"
+#include "device.h"
 
 #define PROTOCOL_VERSION 1
 
+#define PACKET_SIZE sizeof(packet)
+
 /*
- * Packet layout
- * =============
+ * Packet layout (packed, no padding):
  *
  * Byte offsets:
  *
- *   0         1          5                              5 + sizeof(device)
- *   +---------+----------+------------------------------+
- *   | version |   type   |            device            |
- *   |  (u8)   |  (enum)  |   (union, tagged by `type`)  |
- *   +---------+----------+------------------------------+
+ *   0        1        5        7        9        13
+ *   +--------+--------+--------+--------+--------+
+ *   | ver    | type   | event  | code   | value  |
+ *   | u8     | enum   | u16    | u16    | i32    |
+ *   +--------+--------+--------+--------+--------+
  *
- *   device when type == KEYBOARD:
- *
- *       0         2         3         4
- *       +---------+---------+---------+
- *       |   key   |  state  |  mods   |
- *       |  (u16)  |  (u8)   |  (u8)   |
- *       +---------+---------+---------+
- *
- *   device when type == MOUSE:  (TODO #6)
- *
- * Field semantics
- *   version : must equal PROTOCOL_VERSION; receiver rejects mismatches
- *   type    : discriminator selecting the active `device` variant
- *   key     : key code
- *   state   : key_state — PRESSED | RELEASED | AUTO_REPEAT
- *   mods    : bitmask of `modifiers` held when the event fired
+ * Total size: sizeof(packet) = 13 bytes
  */
-
-typedef enum packet_type {
-    MOUSE,
-    KEYBOARD
-} packet_type;
-
-typedef struct keyboard_packet {
-    uint16_t key;
-    uint8_t state;
-    uint8_t mods;
-} keyboard_packet;
-
-typedef union device_packet {
-    keyboard_packet keyboard;
-    /* TODO mouse packet (#6) */
-} device_packet;
 
 typedef struct packet {
     uint8_t version;
+    uint8_t type;
 
-    packet_type type;
-    device_packet device;
-} packet;
+    // taken from input_event <linux/input.h>
+    uint16_t event;
+    uint16_t code;
+    int32_t value;
+} __attribute__((packed)) packet;
+
+void encode_packet(const packet *p, uint8_t *out);
+
+void decode_packet(const uint8_t *data, packet *out);
 
 #endif // PACKET_H_

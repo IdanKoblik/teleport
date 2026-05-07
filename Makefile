@@ -1,6 +1,6 @@
 CC := gcc
 CFLAGS := -Wall -Wextra
-LDLIBS := -lz
+LDLIBS := -lz -ludev -lncurses
 TARGET := tp
 
 SRCS := $(wildcard *.c)

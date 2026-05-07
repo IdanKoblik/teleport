@@ -4,12 +4,16 @@
 #include <stdint.h>
 #include <stdio.h>
 
-typedef struct device {
-    uint8_t vendor_id;
-    uint8_t product_id;
+typedef enum device_type {
+    MOUSE = 1 << 0,
+    KEYBOARD = 1 << 1
+} device_type;
 
-    FILE *input_file;
-    int (*handle)(struct device *d);
-} device;
+typedef struct device_entry {
+    char name[256];
+    char devnode[256];
+} device_entry;
+
+device_entry *fetch_devices(device_type types, size_t *out_count);
 
 #endif // DEVICE_H_

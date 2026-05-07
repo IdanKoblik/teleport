@@ -4,6 +4,7 @@
 #include <arpa/inet.h>
 
 #include "log.h"
+#include "packet.h"
 
 int open_server(const char *addr, uint16_t port, Server *server) {
     int fd;
@@ -69,17 +70,43 @@ int handle_server(const Server *server, volatile sig_atomic_t *stop) {
         inet_ntop(AF_INET, &peer.sin_addr, ip, sizeof(ip));
         LOG("Accepted connection from %s:%u", ip, ntohs(peer.sin_port));
 
+        if (setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
+            ERROR("setsockopt SO_RCVTIMEO failed on client");
+            close(client_fd);
+            continue;
+        }
+
+        uint8_t buffer[PACKET_SIZE];
+        size_t have = 0;
+
         while (!*stop) {
-            char buf[1024];
-            ssize_t n = recv(client_fd, buf, sizeof(buf), 0);
-            if (n > 0)
-                continue;
-            if (n == 0)
+            ssize_t n = recv(client_fd, buffer + have, PACKET_SIZE - have, 0);
+            if (n == 0) {
+                LOG("Peer %s:%u disconnected", ip, ntohs(peer.sin_port));
                 break;
-            if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
+            }
+            if (n < 0) {
+                if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
+                    continue;
+                ERROR("recv failed");
+                break;
+            }
+
+            have += (size_t)n;
+            if (have < PACKET_SIZE)
                 continue;
-            ERROR("recv failed");
-            break;
+
+            packet p;
+            decode_packet(buffer, &p);
+            have = 0;
+
+            if (p.version != PROTOCOL_VERSION) {
+                WARN("dropping packet with unsupported version %u", p.version);
+                continue;
+            }
+
+            LOG("Received packet type=%u event=%u code=%u value=%d",
+                p.type, p.event, p.code, p.value);
         }
 
         close(client_fd);
