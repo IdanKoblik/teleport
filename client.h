@@ -6,10 +6,13 @@
 
 typedef struct Client {
     int fd;
+    int keyboard_fd;
+    int mouse_fd;
+
     struct sockaddr_in sa;
 } Client;
 
-int open_client(const char *addr, uint16_t port, Client *client);
+int open_client(const char *addr, uint16_t port, Client *client, int keyboard, int mouse);
 int handle_client(Client *client, volatile sig_atomic_t *stop);
 void close_client(Client *client);
 
