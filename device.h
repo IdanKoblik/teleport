@@ -16,4 +16,8 @@ typedef struct device_entry {
 
 device_entry *fetch_devices(device_type types, size_t *out_count);
 
+int create_vdevice();
+
+void emit_key(int fd, int type, int code, int val);
+
 #endif // DEVICE_H_

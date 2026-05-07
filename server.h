@@ -13,6 +13,8 @@
 typedef struct Server {
     int fd;
     struct sockaddr_in addr;
+
+    int virtual_device;
 } Server;
 
 int open_server(const char *addr, uint16_t port, Server *server);

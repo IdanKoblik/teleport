@@ -140,6 +140,7 @@ int handle_client(Client *client, volatile sig_atomic_t *stop) {
                 default: break;
             }
             if (held_lctrl && held_rctrl && held_lalt && held_ralt) {
+                ioctl(client->keyboard_fd, EVIOCGRAB, 0);
                 LOG("disconnect hotkey pressed (L+R Ctrl + L+R Alt)");
                 break;
             }

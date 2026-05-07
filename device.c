@@ -1,12 +1,15 @@
 #include "device.h"
 
 #include <libudev.h>
-
-#include "log.h"
 #include <stdlib.h>
 #include <string.h>
+#include <linux/uinput.h>
+#include <fcntl.h>
+#include <unistd.h>
 
-#define EXPAND_LIST(list_ptr, capacity_var) do { \
+#include "log.h"
+
+#define EXPAND_LIST(list_ptr, capacity_var) do {                    \
     (capacity_var) = (capacity_var) == 0 ? 16 : (capacity_var) * 2; \
     device_entry *temp = realloc((list_ptr), (capacity_var) * sizeof(device_entry)); \
     if (!temp) { \
@@ -97,4 +100,79 @@ device_entry *fetch_devices(device_type types, size_t *out_count) {
 
     if (out_count) *out_count = count;
     return list;
+}
+
+int create_vdevice() {
+    int fd = open("/dev/uinput", O_WRONLY | O_NONBLOCK);
+    if (fd < 0) {
+        ERROR("failed to open /dev/uinput");
+        return -1;
+    }
+
+    if (ioctl(fd, UI_SET_EVBIT, EV_KEY) < 0) {
+        ERROR("UI_SET_EVBIT EV_KEY failed");
+        close(fd);
+        return -1;
+    }
+
+    if (ioctl(fd, UI_SET_EVBIT, EV_SYN) < 0) {
+        ERROR("UI_SET_EVBIT EV_SYN failed");
+        close(fd);
+        return -1;
+    }
+
+    for (int code = 1; code < KEY_MAX; code++) {
+        if (ioctl(fd, UI_SET_KEYBIT, code) < 0) {
+            ERROR("UI_SET_KEYBIT failed for code %d", code);
+            close(fd);
+            return -1;
+        }
+    }
+
+    struct uinput_setup usetup;
+    memset(&usetup, 0, sizeof(usetup));
+    usetup.id.bustype = BUS_USB;
+    usetup.id.vendor = 0x1234;
+    usetup.id.product = 0x5678;
+    strcpy(usetup.name, "Teleport virtual device");
+
+    if (ioctl(fd, UI_DEV_SETUP, &usetup) < 0) {
+        ERROR("UI_DEV_SETUP failed");
+        close(fd);
+        return -1;
+    }
+
+    if (ioctl(fd, UI_DEV_CREATE) < 0) {
+        ERROR("UI_DEV_CREATE failed");
+        close(fd);
+        return -1;
+    }
+
+    return fd;
+}
+
+void emit_key(int fd, int type, int code, int val) {
+    struct input_event ie;
+
+    ie.type = type;
+    ie.code = code;
+    ie.value = val;
+    ie.time.tv_sec = 0;
+    ie.time.tv_usec = 0;
+
+    if (write(fd, &ie, sizeof(ie)) != sizeof(ie)) {
+        ERROR("write key event failed (type=%d code=%d val=%d)", type, code, val);
+        return;
+    }
+
+    struct input_event syn;
+    syn.type = EV_SYN;
+    syn.code = SYN_REPORT;
+    syn.value = 0;
+    syn.time.tv_sec = 0;
+    syn.time.tv_usec = 0;
+
+    if (write(fd, &syn, sizeof(syn)) != sizeof(syn)) {
+        ERROR("write SYN_REPORT failed");
+    }
 }

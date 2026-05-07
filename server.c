@@ -3,6 +3,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
+#include "device.h"
 #include "log.h"
 #include "packet.h"
 
@@ -36,6 +37,15 @@ int open_server(const char *addr, uint16_t port, Server *server) {
     memset(server, 0, sizeof(*server));
     server->fd = fd;
     server->addr = sa;
+
+    int virtual_device = create_vdevice();
+    if (virtual_device < 0) {
+        ERROR("failed to create virtual device");
+        close(fd);
+        return -1;
+    }
+
+    server->virtual_device = virtual_device;
     LOG("Opened new server (%s:%u)", addr, port);
 
     return 0;
@@ -105,6 +115,11 @@ int handle_server(const Server *server, volatile sig_atomic_t *stop) {
                 continue;
             }
 
+            if (server->virtual_device < 0)
+                continue;
+
+            emit_key(server->virtual_device, p.event, p.code, p.value);
+
             LOG("Received packet type=%u event=%u code=%u value=%d",
                 p.type, p.event, p.code, p.value);
         }
@@ -122,6 +137,9 @@ void close_server(Server *server) {
 
     if (server->fd >= 0)
         close(server->fd);
+
+    if (server->virtual_device >= 0)
+        close(server->virtual_device);
 
     LOG("Closed server");
 }
